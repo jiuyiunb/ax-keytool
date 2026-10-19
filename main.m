@@ -78,6 +78,55 @@ static void enumerateKeys(void) {
     w([NSString stringWithFormat:@"\n=== ax-keytool v2 %@ ===\n", [NSDate date]]);
     enumerateKeys();
 
+    // ===== 用企业组 HR44G9496T.* 枚举并尝试签名（找 App 真正用的那把）=====
+    {
+        NSArray *groups = @[@"HR44G9496T.*"];
+        for (NSString *g in groups) {
+            NSMutableDictionary *q = [NSMutableDictionary dictionary];
+            q[(__bridge id)kSecClass] = (__bridge id)kSecClassKey;
+            q[(__bridge id)kSecAttrAccessGroup] = g;
+            q[(__bridge id)kSecReturnAttributes] = @YES;
+            q[(__bridge id)kSecMatchLimit] = (__bridge id)kSecMatchLimitAll;
+            CFTypeRef res = NULL;
+            OSStatus st = SecItemCopyMatching((__bridge CFDictionaryRef)q, &res);
+            w([NSString stringWithFormat:@"\n===== GROUP %@ status=%d =====\n", g, (int)st]);
+            if (st == errSecSuccess && res) {
+                NSArray *items = (__bridge_transfer NSArray *)res;
+                for (NSDictionary *it in items) {
+                    NSString *tag = @"";
+                    id t = it[(__bridge id)kSecAttrApplicationTag];
+                    if ([t isKindOfClass:[NSData class]])
+                        tag = [[NSString alloc] initWithData:t encoding:NSUTF8StringEncoding];
+                    w([NSString stringWithFormat:@"  atag=%@\n", tag]);
+                    if (tag.length < 5) continue;
+                    OSStatus e2 = 0;
+                    SecKeyRef k2 = copyKey(tag, g, &e2);
+                    w([NSString stringWithFormat:@"    copyRef(group) status=%d\n", (int)e2]);
+                    if (!k2) k2 = copyKey(tag, nil, &e2);
+                    if (!k2) continue;
+                    NSError *er = nil;
+                    NSData *sg = CFBridgingRelease(SecKeyCreateSignature(
+                        k2, kSecKeyAlgorithmECDSASignatureMessageX962SHA256,
+                        (__bridge CFDataRef)[MSG dataUsingEncoding:NSUTF8StringEncoding],
+                        (CFErrorRef *)&er));
+                    if (sg) {
+                        w([NSString stringWithFormat:@"    SIGN_OK %@\n    SIG=%@\n", tag, hex(sg)]);
+                        writeSig([NSString stringWithFormat:@"%@\n%@\n", tag, hex(sg)]);
+                    } else {
+                        w([NSString stringWithFormat:@"    SIGN_FAIL %@ %@\n", tag, er.localizedDescription]);
+                    }
+                    SecKeyRef pub2 = SecKeyCopyPublicKey(k2);
+                    if (pub2) {
+                        NSData *pd = CFBridgingRelease(SecKeyCopyExternalRepresentation(pub2, NULL));
+                        if (pd) w([NSString stringWithFormat:@"    PUB_HEX=%@\n", hex(pd)]);
+                        CFRelease(pub2);
+                    }
+                    CFRelease(k2);
+                }
+            }
+        }
+    }
+
     // ===== 权威路径：由 iOS 自己拼整条待签串并签名 =====
     // 输入：Documents/req.bin(请求体) + Documents/meta.txt(三行: path / ts / nonce)
     NSString *metaPath = [docsPath() stringByAppendingPathComponent:@"meta.txt"];
