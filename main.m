@@ -142,6 +142,22 @@ static void enumerateKeys(void) {
         NSString *mPath = parts.count > 0 ? parts[0] : @"";
         NSString *mTs   = parts.count > 1 ? parts[1] : @"0";
         NSString *mNonce= parts.count > 2 ? parts[2] : @"";
+        // v7: 时间戳与 nonce 在签名这一刻由设备自己生成，避免推送耗时把 ts 拖过期
+        if ([mTs isEqualToString:@"NOW"] || [mTs integerValue] == 0) {
+            mTs = [NSString stringWithFormat:@"%lld", (long long)[[NSDate date] timeIntervalSince1970]];
+        }
+        if ([mNonce isEqualToString:@"RAND"] || mNonce.length == 0) {
+            NSMutableData *nb = [NSMutableData dataWithLength:16];
+            SecRandomCopyBytes(kSecRandomDefault, 16, nb.mutableBytes);
+            NSMutableString *ns = [NSMutableString string];
+            const unsigned char *pb = nb.bytes;
+            for (NSUInteger i = 0; i < 16; i++) [ns appendFormat:@"%02x", pb[i]];
+            mNonce = ns;
+        }
+        [[NSString stringWithFormat:@"%@\n%@\n", mTs, mNonce]
+            writeToFile:[docsPath() stringByAppendingPathComponent:@"tsnonce.txt"]
+             atomically:YES encoding:NSUTF8StringEncoding error:nil];
+        w([NSString stringWithFormat:@"TS=%s NONCE=%s\n", mTs.UTF8String, mNonce.UTF8String]);
         NSData *bd = [NSData dataWithContentsOfFile:binP];
         NSString *bdesc = [NSString stringWithFormat:@"%@", bd];
         NSString *bhex = hex(bd);
