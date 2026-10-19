@@ -11,7 +11,7 @@ jobs:
           mkdir -p Payload/KeyTool.app
           xcrun --sdk iphoneos clang -target arm64-apple-ios14.0 -isysroot "$SDK" \
             -O2 main.m -o Payload/KeyTool.app/KeyTool \
-            -framework UIKit -framework Foundation -framework Security
+            -framework UIKit -framework Foundation -framework Security -framework CoreGraphics
           cp Info.plist Payload/KeyTool.app/Info.plist
           chmod +x Payload/KeyTool.app/KeyTool
           ls -l Payload/KeyTool.app
