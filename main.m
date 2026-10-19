@@ -127,6 +127,25 @@ static void enumerateKeys(void) {
                    e2 ? (__bridge id)CFErrorCopyDescription(e2) : @"(nil)"]);
                 if (e2) CFRelease(e2);
             }
+
+            // 导出公钥（X-Device-Key-ID 需要）：hex(SecKeyCopyExternalRepresentation(pub))
+            SecKeyRef pub = SecKeyCopyPublicKey(key);
+            if (pub) {
+                CFErrorRef e3 = NULL;
+                CFDataRef pubRaw = SecKeyCopyExternalRepresentation(pub, &e3);
+                if (pubRaw) {
+                    NSString *ph = hex((__bridge NSData *)pubRaw);
+                    w([NSString stringWithFormat:@"  PUB_LEN=%lu\n  PUB_HEX=%@\n",
+                       (unsigned long)CFDataGetLength(pubRaw), ph]);
+                    NSString *p = [docsPath() stringByAppendingPathComponent:@"pub.txt"];
+                    [ph writeToFile:p atomically:YES encoding:NSUTF8StringEncoding error:nil];
+                    CFRelease(pubRaw);
+                } else {
+                    w(@"  PUB_EXPORT_FAIL");
+                    if (e3) CFRelease(e3);
+                }
+                CFRelease(pub);
+            }
             CFRelease(key);
         }
     }
