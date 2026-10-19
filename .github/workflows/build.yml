@@ -1,0 +1,23 @@
+name: build-keytool
+on: [push, workflow_dispatch]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app bundle and IPA
+        run: |
+          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
+          mkdir -p Payload/KeyTool.app
+          xcrun --sdk iphoneos clang -target arm64-apple-ios14.0 -isysroot "$SDK" \
+            -O2 main.m -o Payload/KeyTool.app/KeyTool \
+            -framework UIKit -framework Foundation -framework Security
+          cp Info.plist Payload/KeyTool.app/Info.plist
+          chmod +x Payload/KeyTool.app/KeyTool
+          ls -l Payload/KeyTool.app
+          zip -qry keytool.ipa Payload
+          ls -l keytool.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: keytool-ipa
+          path: keytool.ipa
