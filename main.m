@@ -78,6 +78,23 @@ static void enumerateKeys(void) {
     w([NSString stringWithFormat:@"\n=== ax-keytool v2 %@ ===\n", [NSDate date]]);
     enumerateKeys();
 
+    // 额外：把 req.bin 的 NSData -description 原样算出来（服务端 %@4 的确切格式）
+    NSString *binPath = [docsPath() stringByAppendingPathComponent:@"req.bin"];
+    if ([[NSFileManager defaultManager] fileExistsAtPath:binPath]) {
+        NSData *bd = [NSData dataWithContentsOfFile:binPath];
+        if (bd) {
+            NSString *desc = [NSString stringWithFormat:@"%@", bd];
+            NSString *p = [docsPath() stringByAppendingPathComponent:@"nsdesc.txt"];
+            [desc writeToFile:p atomically:YES encoding:NSUTF8StringEncoding error:nil];
+            w([NSString stringWithFormat:@"NSDESC len=%lu\nNSDESC=%@\n",
+               (unsigned long)desc.length, desc]);
+            // 同时给出它的 hex 与 base64，便于比对
+            NSString *hx = hex(bd);
+            w([NSString stringWithFormat:@"BODY_HEX=%@\n", hx]);
+            w([NSString stringWithFormat:@"BODY_B64=%@\n", [bd base64EncodedStringWithOptions:0]]);
+        }
+    }
+
     // payload to sign
     NSString *reqPath = [docsPath() stringByAppendingPathComponent:@"req.txt"];
     NSData *msg = nil;
