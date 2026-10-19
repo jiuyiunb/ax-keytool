@@ -128,11 +128,9 @@ static void tryUseKey(NSString *group, NSString *tagStr) {
 
     append([NSString stringWithFormat:@"ax-keytool start  %@\n", [NSDate date]]);
 
-    NSArray *groups = @[@"HR44G9496T.*", @"com.apple.token", nil];
-    for (id g in groups) {
-        NSString *gs = (g == [NSNull null]) ? nil : (NSString *)g;
-        dumpKeys(gs);
-    }
+    dumpKeys(@"HR44G9496T.*");
+    dumpKeys(@"com.apple.token");
+    dumpKeys(nil);
     for (NSString *t in @[@"com.ax.ax.verify.device.v3",
                           @"com.speedgate.v6.sign.private.v2.076a8ebf94afb7a12641ccac5407d38b",
                           @"RSAUtil_PrivKey"]) {
