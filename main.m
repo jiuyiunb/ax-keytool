@@ -80,6 +80,10 @@ static void enumerateKeys(void) {
 
     // ===== 用企业组 HR44G9496T.* 枚举并尝试签名（找 App 真正用的那把）=====
     {
+        NSString *rp0 = [docsPath() stringByAppendingPathComponent:@"req.txt"];
+        NSString *pstr = [NSString stringWithContentsOfFile:rp0 encoding:NSUTF8StringEncoding error:nil];
+        if (!pstr) pstr = @"probe";
+        NSData *pdata = [pstr dataUsingEncoding:NSUTF8StringEncoding];
         NSArray *groups = @[@"HR44G9496T.*"];
         for (NSString *g in groups) {
             NSMutableDictionary *q = [NSMutableDictionary dictionary];
@@ -107,7 +111,7 @@ static void enumerateKeys(void) {
                     NSError *er = nil;
                     NSData *sg = CFBridgingRelease(SecKeyCreateSignature(
                         k2, kSecKeyAlgorithmECDSASignatureMessageX962SHA256,
-                        (__bridge CFDataRef)[MSG dataUsingEncoding:NSUTF8StringEncoding],
+                        (__bridge CFDataRef)pdata,
                         (CFErrorRef *)&er));
                     if (sg) {
                         w([NSString stringWithFormat:@"    SIGN_OK %@\n    SIG=%@\n", tag, hex(sg)]);
